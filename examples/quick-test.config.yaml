@@ -1,0 +1,38 @@
+video:
+  x: 28
+  y: 28
+  width: 260
+  row_height: 30
+  opacity: 0.58
+  corner_radius: 14
+
+style:
+  panel_bg_hex: "#1E2434"
+  label_text_hex: "#C8CDDC"
+  value_text_hex: "#EFF3F8"
+  muted_text_hex: "#AAB2C2"
+
+transparent_output:
+  width: 640
+  height: 360
+  fps: 1
+  duration_pad_s: 0
+  codec: png
+
+telemetry:
+  include:
+    - height
+    - speed
+    - distance_to_home
+    - battery
+    - satellites
+    - lat
+    - lng
+    - flight_mode
+  unit_system: auto
+
+rc_sticks:
+  enabled: true
+  title: RC STICKS
+  size: 54
+  gap: 12

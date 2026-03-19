@@ -1,0 +1,65 @@
+video:
+  # Panel top-left in output frame pixels.
+  x: 28
+  y: 28
+  width: 260
+  row_height: 30
+  opacity: 0.58
+  corner_radius: 14
+
+style:
+  # Hex colors for panel and text.
+  panel_bg_hex: "#1E2434"
+  label_text_hex: "#C8CDDC"
+  value_text_hex: "#EFF3F8"
+  muted_text_hex: "#AAB2C2"
+
+transparent_output:
+  width: 1920
+  height: 1080
+  fps: 30
+  duration_pad_s: 0.0
+  # png or qtrle (both keep alpha in .mov). png is usually safer in preview apps.
+  codec: png
+
+telemetry:
+  # Pick only the fields you want in the card.
+  include:
+    - height
+    - speed
+    - distance_to_home
+    - battery
+    - satellites
+    - lat
+    - lng
+    - flight_mode
+
+  # Optional per-field display labels.
+  labels:
+    height: Height
+    speed: Speed
+    distance_to_home: Dist. Home
+    battery: Battery
+    satellites: Satellites
+    lat: Lat
+    lng: Lng
+    flight_mode: Mode
+
+  # Decimals for numeric fields.
+  decimals:
+    height: 1
+    speed: 1
+    distance_to_home: 0
+    battery: 0
+    satellites: 0
+    lat: 6
+    lng: 6
+
+  # auto = keep source unit family from CSV, metric/imperial force output units.
+  unit_system: auto
+
+rc_sticks:
+  enabled: true
+  title: RC STICKS
+  size: 54
+  gap: 12
