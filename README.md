@@ -2,6 +2,9 @@
 
 Configurable drone telemetry card overlay for video exports.
 
+> [!IMPORTANT]
+> *DJI is a registered trademark of SZ DJI Technology Co., Ltd. DroneLogbook® is a registered trademark of DroneAnalytics Inc. Litchi is a trademark of VC Technology Ltd. Airdata or Airdata UAV is a trademark of Airdata UAV, Inc. This project is independent and is not affiliated with, sponsored by, authorized by, or endorsed by SZ DJI Technology Co., Ltd., DroneAnalytics Inc., VC Technology Ltd., Airdata UAV, Inc., or their affiliates.*
+
 ## Why this stack
 
 - `opencv-python`: Fast frame I/O + drawing, practical for near real-time rendering on all major OSes.
