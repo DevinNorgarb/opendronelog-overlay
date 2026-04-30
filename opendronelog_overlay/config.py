@@ -73,7 +73,7 @@ class GaugesConfig:
     y: int = 28
     gap: int = 14
     arc_color_hex: str = "#2D3446"
-    needle_color_hex: str = "#28C7EC"
+    needle_color_hex: str = "#FF4D4F"
     tick_color_hex: str = "#6B7280"
     label_color_hex: str = "#C8CDDC"
     value_color_hex: str = "#EFF3F8"

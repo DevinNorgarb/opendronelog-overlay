@@ -75,7 +75,7 @@ rc_sticks:
 #   y: 28
 #   gap: 14
 #   arc_color_hex: "#2D3446"
-#   needle_color_hex: "#28C7EC"
+#   needle_color_hex: "#FF4D4F"
 #   tick_color_hex: "#6B7280"
 #   label_color_hex: "#C8CDDC"
 #   value_color_hex: "#EFF3F8"

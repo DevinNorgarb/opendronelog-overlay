@@ -87,7 +87,7 @@ See `examples/overlay.config.yaml`.
 - `gauges.y`: vertical offset (default `28`).
 - `gauges.gap`: spacing between gauge dials (default `14`).
 - `gauges.arc_color_hex`: arc track color, for example `#2D3446`.
-- `gauges.needle_color_hex`: needle and active arc color, for example `#28C7EC`.
+- `gauges.needle_color_hex`: needle and active arc color, for example `#FF4D4F`.
 - `gauges.tick_color_hex`: tick mark color, for example `#6B7280`.
 - `gauges.label_color_hex`: gauge label text color, for example `#C8CDDC`.
 - `gauges.value_color_hex`: gauge value text color, for example `#EFF3F8`.
