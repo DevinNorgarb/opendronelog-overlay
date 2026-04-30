@@ -66,10 +66,10 @@ rc_sticks:
 
 gauges:
   enabled: true
-  layout: horizontal       # horizontal or vertical
-  width: 140
+  layout: horizontal       # used for manual x/y placement only
+  width: 140               # used for manual x/y placement only
   height: 140
-  x: -1                    # -1 = auto-position below text panel (left-aligned)
+  x: -1                    # -1 = auto-stack vertical full-width rows below text panel
   y: 28                    # used when x >= 0
   gap: 14
   arc_color_hex: "#2D3446"

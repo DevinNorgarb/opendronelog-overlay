@@ -427,16 +427,19 @@ def _draw_gauges_strip_rgba(
     panel_h: int,
 ) -> None:
     gc = config.gauges
-    gw, gh = gc.width, gc.height
+    gh = gc.height
 
     # Auto placement keeps gauges aligned with the panel by default:
     # left edge matches panel and gauges are placed below the metrics card.
-    if gc.x >= 0:
+    auto_position = gc.x < 0
+    if not auto_position:
         cx = gc.x
         cy = gc.y
+        gw = gc.width
     else:
         cx = panel_x
         cy = panel_y + panel_h + 16
+        gw = panel_w
 
     gauge_fields = [
         ("speed", "Speed", 0.0, 30.0),
@@ -463,7 +466,10 @@ def _draw_gauges_strip_rgba(
                 val_max = fallback_max
 
         gap = gc.gap
-        if gc.layout == "horizontal":
+        if auto_position:
+            gx = cx
+            gy = cy + idx * (gh + gap)
+        elif gc.layout == "horizontal":
             gx = cx + idx * (gw + gap)
             gy = cy
         else:
@@ -511,9 +517,11 @@ def _draw_gauge_rgba(
         panel_color_hex="#000000",
     )
 
-    cx = x + w // 2
-    cy = y + int(h * 0.48)
-    r = int(min(w, h) * 0.36)
+    wide_layout = w >= int(h * 1.35)
+    cx = x + (int(w * 0.30) if wide_layout else w // 2)
+    cy = y + int(h * 0.50)
+    r = int(min(h * 0.34, (w * 0.22) if wide_layout else min(w, h) * 0.36))
+    r = max(16, r)
     thickness = max(3, int(r * 0.18))
 
     if value is None or max_val <= min_val:
@@ -548,12 +556,22 @@ def _draw_gauge_rgba(
 
     cv2.circle(frame, (cx, cy), max(3, int(thickness * 0.35)), needle_color, -1, cv2.LINE_AA)
 
-    label_y = cy + r + thickness + 18
-    label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)[0]
+    if wide_layout:
+        text_center_x = x + int(w * 0.68)
+        label_y = y + int(h * 0.48)
+        label_scale = 0.52
+        value_scale = 0.62
+    else:
+        text_center_x = cx
+        label_y = cy + r + thickness + 18
+        label_scale = 0.45
+        value_scale = 0.50
+
+    label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, label_scale, 1)[0]
     cv2.putText(
         frame, label,
-        (cx - label_size[0] // 2, label_y),
-        cv2.FONT_HERSHEY_SIMPLEX, 0.45, label_color, 1, cv2.LINE_AA,
+        (text_center_x - label_size[0] // 2, label_y),
+        cv2.FONT_HERSHEY_SIMPLEX, label_scale, label_color, 1, cv2.LINE_AA,
     )
 
     if value is not None:
@@ -562,19 +580,19 @@ def _draw_gauge_rgba(
         else:
             val_str = f"{value:.0f}"
 
-        val_size = cv2.getTextSize(val_str, cv2.FONT_HERSHEY_SIMPLEX, 0.50, 1)[0]
+        val_size = cv2.getTextSize(val_str, cv2.FONT_HERSHEY_SIMPLEX, value_scale, 1)[0]
         cv2.putText(
             frame, val_str,
-            (cx - val_size[0] // 2, label_y + 18),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.50, value_color, 1, cv2.LINE_AA,
+            (text_center_x - val_size[0] // 2, label_y + 24),
+            cv2.FONT_HERSHEY_SIMPLEX, value_scale, value_color, 1, cv2.LINE_AA,
         )
     else:
         na_str = "n/a"
-        na_size = cv2.getTextSize(na_str, cv2.FONT_HERSHEY_SIMPLEX, 0.50, 1)[0]
+        na_size = cv2.getTextSize(na_str, cv2.FONT_HERSHEY_SIMPLEX, value_scale, 1)[0]
         cv2.putText(
             frame, na_str,
-            (cx - na_size[0] // 2, label_y + 18),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.50, value_color, 1, cv2.LINE_AA,
+            (text_center_x - na_size[0] // 2, label_y + 24),
+            cv2.FONT_HERSHEY_SIMPLEX, value_scale, value_color, 1, cv2.LINE_AA,
         )
 
 
