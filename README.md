@@ -83,8 +83,8 @@ See `examples/overlay.config.yaml`.
 - `gauges.enabled`: enable/disable gauge rendering (default `false`).
 - `gauges.layout`: `horizontal` (default) or `vertical` — layout direction for the gauge strip.
 - `gauges.width` / `gauges.height`: size of each gauge dial in pixels (default `140`).
-- `gauges.x`: horizontal offset; set to `-1` to auto-position to the right of the text panel (default `-1`).
-- `gauges.y`: vertical offset (default `28`).
+- `gauges.x`: horizontal offset; set to `-1` to auto-position below the text panel (left-aligned, default `-1`).
+- `gauges.y`: vertical offset (default `28`, used when `gauges.x >= 0`).
 - `gauges.gap`: spacing between gauge dials (default `14`).
 - `gauges.arc_color_hex`: arc track color, for example `#2D3446`.
 - `gauges.needle_color_hex`: needle and active arc color, for example `#FF4D4F`.

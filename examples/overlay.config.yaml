@@ -71,8 +71,8 @@ rc_sticks:
 #   layout: horizontal       # horizontal or vertical
 #   width: 140
 #   height: 140
-#   x: -1                    # -1 = auto-position to right of text panel
-#   y: 28
+#   x: -1                    # -1 = auto-position below text panel (left-aligned)
+#   y: 28                    # used when x >= 0
 #   gap: 14
 #   arc_color_hex: "#2D3446"
 #   needle_color_hex: "#FF4D4F"

@@ -22,7 +22,7 @@ from opendronelog_overlay.renderer import (
 
 GAUGE_COLORS = {
     "arc_color": _hex_to_bgra("#2D3446", 255),
-    "needle_color": _hex_to_bgra("#28C7EC", 255),
+    "needle_color": _hex_to_bgra("#FF4D4F", 255),
     "tick_color": _hex_to_bgra("#6B7280", 200),
     "label_color": _hex_to_bgra("#C8CDDC", 255),
     "value_color": _hex_to_bgra("#EFF3F8", 255),

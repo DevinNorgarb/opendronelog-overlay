@@ -275,7 +275,7 @@ def _draw_overlay_rgba(frame: np.ndarray, t: float, telemetry: TelemetryData, co
         _draw_rc_sticks_rgba(frame, x + 14, y_cursor, telemetry, t, config, stick_label_color=muted_color)
 
     if config.gauges.enabled:
-        _draw_gauges_strip_rgba(frame, telemetry, t, config, panel.x, panel.y, panel.width)
+        _draw_gauges_strip_rgba(frame, telemetry, t, config, panel.x, panel.y, panel.width, panel_h)
 
     return frame
 
@@ -424,12 +424,19 @@ def _draw_gauges_strip_rgba(
     panel_x: int,
     panel_y: int,
     panel_w: int,
+    panel_h: int,
 ) -> None:
     gc = config.gauges
     gw, gh = gc.width, gc.height
 
-    cx = gc.x if gc.x >= 0 else panel_x + panel_w + 16
-    cy = gc.y
+    # Auto placement keeps gauges aligned with the panel by default:
+    # left edge matches panel and gauges are placed below the metrics card.
+    if gc.x >= 0:
+        cx = gc.x
+        cy = gc.y
+    else:
+        cx = panel_x
+        cy = panel_y + panel_h + 16
 
     gauge_fields = [
         ("speed", "Speed", 0.0, 30.0),
@@ -493,6 +500,17 @@ def _draw_gauge_rgba(
     label_color: tuple[int, int, int, int],
     value_color: tuple[int, int, int, int],
 ) -> None:
+    _draw_rounded_panel_rgba(
+        frame=frame,
+        x=x,
+        y=y,
+        w=w,
+        h=h,
+        radius=max(8, int(min(w, h) * 0.1)),
+        alpha=0.46,
+        panel_color_hex="#000000",
+    )
+
     cx = x + w // 2
     cy = y + int(h * 0.48)
     r = int(min(w, h) * 0.36)
