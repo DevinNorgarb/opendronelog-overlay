@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
+import math
 import subprocess
 import sys
 import time
@@ -273,6 +274,9 @@ def _draw_overlay_rgba(frame: np.ndarray, t: float, telemetry: TelemetryData, co
         y_cursor += 20
         _draw_rc_sticks_rgba(frame, x + 14, y_cursor, telemetry, t, config, stick_label_color=muted_color)
 
+    if config.gauges.enabled:
+        _draw_gauges_strip_rgba(frame, telemetry, t, config, panel.x, panel.y, panel.width)
+
     return frame
 
 
@@ -410,6 +414,150 @@ def _draw_single_stick_rgba(
         1,
         cv2.LINE_AA,
     )
+
+
+def _draw_gauges_strip_rgba(
+    frame: np.ndarray,
+    telemetry: TelemetryData,
+    t: float,
+    config: OverlayConfig,
+    panel_x: int,
+    panel_y: int,
+    panel_w: int,
+) -> None:
+    gc = config.gauges
+    gw, gh = gc.width, gc.height
+
+    cx = gc.x if gc.x >= 0 else panel_x + panel_w + 16
+    cy = gc.y
+
+    gauge_fields = [
+        ("speed", "Speed", 0.0, 30.0),
+        ("height", "Height", 0.0, 120.0),
+        ("battery", "Battery", 0.0, 100.0),
+    ]
+
+    arc_color = _hex_to_bgra(gc.arc_color_hex, 255)
+    needle_color = _hex_to_bgra(gc.needle_color_hex, 255)
+    tick_color = _hex_to_bgra(gc.tick_color_hex, 200)
+    label_color = _hex_to_bgra(gc.label_color_hex, 255)
+    value_color = _hex_to_bgra(gc.value_color_hex, 255)
+
+    for idx, (field, label, fallback_min, fallback_max) in enumerate(gauge_fields):
+        v = _sample_numeric(telemetry, field, t)
+        unit = telemetry.units.get(field, "")
+
+        val_min = fallback_min
+        val_max = fallback_max
+        if v is not None and telemetry.numeric.get(field) is not None:
+            data = telemetry.numeric[field]
+            val_max = max(float(np.max(data)) * 1.15, fallback_max * 0.5)
+            if val_max <= val_min:
+                val_max = fallback_max
+
+        gap = gc.gap
+        if gc.layout == "horizontal":
+            gx = cx + idx * (gw + gap)
+            gy = cy
+        else:
+            gx = cx
+            gy = cy + idx * (gh + gap)
+
+        if gx + gw > frame.shape[1] or gy + gh > frame.shape[0]:
+            continue
+
+        _draw_gauge_rgba(
+            frame, gx, gy, gw, gh,
+            value=v, min_val=val_min, max_val=val_max,
+            label=label, unit=unit,
+            arc_color=arc_color, needle_color=needle_color,
+            tick_color=tick_color, label_color=label_color,
+            value_color=value_color,
+        )
+
+
+GAUGE_START_DEG = 140
+GAUGE_END_DEG = 400
+GAUGE_SWEEP = GAUGE_END_DEG - GAUGE_START_DEG
+
+
+def _draw_gauge_rgba(
+    frame: np.ndarray,
+    x: int, y: int, w: int, h: int,
+    value: float | None,
+    min_val: float, max_val: float,
+    label: str, unit: str,
+    arc_color: tuple[int, int, int, int],
+    needle_color: tuple[int, int, int, int],
+    tick_color: tuple[int, int, int, int],
+    label_color: tuple[int, int, int, int],
+    value_color: tuple[int, int, int, int],
+) -> None:
+    cx = x + w // 2
+    cy = y + int(h * 0.48)
+    r = int(min(w, h) * 0.36)
+    thickness = max(3, int(r * 0.18))
+
+    if value is None or max_val <= min_val:
+        norm = 0.0
+        active = False
+    else:
+        norm = max(0.0, min(1.0, (value - min_val) / (max_val - min_val)))
+        active = True
+
+    cv2.ellipse(frame, (cx, cy), (r, r), 0, GAUGE_START_DEG, GAUGE_END_DEG, arc_color, thickness)
+
+    if active:
+        val_deg = GAUGE_START_DEG + norm * GAUGE_SWEEP
+        cv2.ellipse(frame, (cx, cy), (r, r), 0, GAUGE_START_DEG, int(val_deg), needle_color, thickness)
+
+    tick_count = 5
+    inner_r = r
+    outer_r = r + thickness // 2 + 3
+    for i in range(tick_count + 1):
+        a = math.radians(GAUGE_START_DEG + i * GAUGE_SWEEP / tick_count)
+        x1 = cx + int(inner_r * math.cos(a))
+        y1 = cy + int(inner_r * math.sin(a))
+        x2 = cx + int(outer_r * math.cos(a))
+        y2 = cy + int(outer_r * math.sin(a))
+        cv2.line(frame, (x1, y1), (x2, y2), tick_color, 1, cv2.LINE_AA)
+
+    needle_angle = math.radians(GAUGE_START_DEG + norm * GAUGE_SWEEP)
+    needle_len = int(r * 0.78)
+    nx = cx + int(needle_len * math.cos(needle_angle))
+    ny = cy + int(needle_len * math.sin(needle_angle))
+    cv2.line(frame, (cx, cy), (nx, ny), needle_color, 2, cv2.LINE_AA)
+
+    cv2.circle(frame, (cx, cy), max(3, int(thickness * 0.35)), needle_color, -1, cv2.LINE_AA)
+
+    label_y = cy + r + thickness + 18
+    label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)[0]
+    cv2.putText(
+        frame, label,
+        (cx - label_size[0] // 2, label_y),
+        cv2.FONT_HERSHEY_SIMPLEX, 0.45, label_color, 1, cv2.LINE_AA,
+    )
+
+    if value is not None:
+        if unit:
+            val_str = f"{value:.1f} {unit}"
+        else:
+            val_str = f"{value:.0f}"
+
+        val_size = cv2.getTextSize(val_str, cv2.FONT_HERSHEY_SIMPLEX, 0.50, 1)[0]
+        cv2.putText(
+            frame, val_str,
+            (cx - val_size[0] // 2, label_y + 18),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.50, value_color, 1, cv2.LINE_AA,
+        )
+    else:
+        na_str = "n/a"
+        na_size = cv2.getTextSize(na_str, cv2.FONT_HERSHEY_SIMPLEX, 0.50, 1)[0]
+        cv2.putText(
+            frame, na_str,
+            (cx - na_size[0] // 2, label_y + 18),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.50, value_color, 1, cv2.LINE_AA,
+        )
 
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:

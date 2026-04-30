@@ -75,6 +75,25 @@ See `examples/overlay.config.yaml`.
 - `style.value_text_hex`: value color, for example `#EFF3F8`.
 - `style.muted_text_hex`: muted text color (section titles, stick labels), for example `#AAB2C2`.
 
+## Experimental: Dial Gauges
+
+> [!NOTE]
+> Dial gauges are an **experimental** feature, disabled by default. Enable with `gauges.enabled: true` in your config.
+
+- `gauges.enabled`: enable/disable gauge rendering (default `false`).
+- `gauges.layout`: `horizontal` (default) or `vertical` — layout direction for the gauge strip.
+- `gauges.width` / `gauges.height`: size of each gauge dial in pixels (default `140`).
+- `gauges.x`: horizontal offset; set to `-1` to auto-position to the right of the text panel (default `-1`).
+- `gauges.y`: vertical offset (default `28`).
+- `gauges.gap`: spacing between gauge dials (default `14`).
+- `gauges.arc_color_hex`: arc track color, for example `#2D3446`.
+- `gauges.needle_color_hex`: needle and active arc color, for example `#28C7EC`.
+- `gauges.tick_color_hex`: tick mark color, for example `#6B7280`.
+- `gauges.label_color_hex`: gauge label text color, for example `#C8CDDC`.
+- `gauges.value_color_hex`: gauge value text color, for example `#EFF3F8`.
+
+Gauges render for `speed`, `height`, and `battery` fields. Value ranges are auto-scaled from telemetry data.
+
 Supported telemetry field keys:
 
 - `height`

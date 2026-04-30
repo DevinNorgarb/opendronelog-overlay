@@ -64,12 +64,29 @@ class RcSticksConfig:
 
 
 @dataclass
+class GaugesConfig:
+    enabled: bool = False
+    layout: str = "horizontal"
+    width: int = 140
+    height: int = 140
+    x: int = -1
+    y: int = 28
+    gap: int = 14
+    arc_color_hex: str = "#2D3446"
+    needle_color_hex: str = "#28C7EC"
+    tick_color_hex: str = "#6B7280"
+    label_color_hex: str = "#C8CDDC"
+    value_color_hex: str = "#EFF3F8"
+
+
+@dataclass
 class OverlayConfig:
     video: VideoPanelConfig = field(default_factory=VideoPanelConfig)
     telemetry: TelemetryConfig = field(default_factory=TelemetryConfig)
     rc_sticks: RcSticksConfig = field(default_factory=RcSticksConfig)
     transparent_output: TransparentOutputConfig = field(default_factory=TransparentOutputConfig)
     style: StyleConfig = field(default_factory=StyleConfig)
+    gauges: GaugesConfig = field(default_factory=GaugesConfig)
 
 
 VALID_FIELDS = {
@@ -110,6 +127,7 @@ def load_config(path: str | Path | None) -> OverlayConfig:
             "rc_sticks": default_cfg.rc_sticks.__dict__,
             "transparent_output": default_cfg.transparent_output.__dict__,
             "style": default_cfg.style.__dict__,
+            "gauges": default_cfg.gauges.__dict__,
         },
         raw,
     )
@@ -120,6 +138,7 @@ def load_config(path: str | Path | None) -> OverlayConfig:
         rc_sticks=RcSticksConfig(**merged["rc_sticks"]),
         transparent_output=TransparentOutputConfig(**merged["transparent_output"]),
         style=StyleConfig(**merged["style"]),
+        gauges=GaugesConfig(**merged["gauges"]),
     )
 
     unknown = set(cfg.telemetry.include) - VALID_FIELDS
@@ -145,6 +164,23 @@ def load_config(path: str | Path | None) -> OverlayConfig:
     _validate_hex_color("style.label_text_hex", cfg.style.label_text_hex)
     _validate_hex_color("style.value_text_hex", cfg.style.value_text_hex)
     _validate_hex_color("style.muted_text_hex", cfg.style.muted_text_hex)
+
+    for field_key, d in cfg.telemetry.decimals.items():
+        if not isinstance(d, int) or d < 0:
+            raise ValueError(f"telemetry.decimals[{field_key}] must be a non-negative integer, got {d!r}")
+
+    if cfg.gauges.enabled:
+        if cfg.gauges.layout not in {"horizontal", "vertical"}:
+            raise ValueError("gauges.layout must be one of: horizontal, vertical")
+        if cfg.gauges.width <= 0 or cfg.gauges.height <= 0:
+            raise ValueError("gauges.width and gauges.height must be > 0")
+        if cfg.gauges.gap < 0:
+            raise ValueError("gauges.gap must be >= 0")
+        _validate_hex_color("gauges.arc_color_hex", cfg.gauges.arc_color_hex)
+        _validate_hex_color("gauges.needle_color_hex", cfg.gauges.needle_color_hex)
+        _validate_hex_color("gauges.tick_color_hex", cfg.gauges.tick_color_hex)
+        _validate_hex_color("gauges.label_color_hex", cfg.gauges.label_color_hex)
+        _validate_hex_color("gauges.value_color_hex", cfg.gauges.value_color_hex)
 
     return cfg
 
