@@ -1,19 +1,35 @@
 # OpenDroneLog Overlay
 
-Configurable drone telemetry card overlay for video exports.
+Configurable telemetry overlay for drone video exports: a translucent **metrics card**, optional **RC stick** visualization, and optional **dial gauges** for speed, altitude, and battery—rendered to a transparent clip or paired with **SRT** subtitles.
 
 > [!IMPORTANT]
 > *DJI is a registered trademark of SZ DJI Technology Co., Ltd. DroneLogbook® is a registered trademark of DroneAnalytics Inc. Litchi is a trademark of VC Technology Ltd. Airdata or Airdata UAV is a trademark of Airdata UAV, Inc. This project is independent and is not affiliated with, sponsored by, authorized by, or endorsed by SZ DJI Technology Co., Ltd., DroneAnalytics Inc., VC Technology Ltd., Airdata UAV, Inc., or their affiliates.*
 
+## Preview
+
+Synthetic telemetry composited on a dark background (your export uses transparency so you can composite over real footage).
+
+| Telemetry card + RC sticks | Same layout **with dial gauges** |
+| :---: | :---: |
+| ![Telemetry card overlay example](docs/images/readme-overlay-card.png) | ![Telemetry overlay with speed, height, and battery dial gauges](docs/images/readme-overlay-gauges.png) |
+
+Enable gauges in YAML with `gauges.enabled: true`. See [`examples/gauges.config.yaml`](examples/gauges.config.yaml) for a complete example.
+
+## Features
+
+- **Telemetry card** — Pick columns, labels, decimals, and `metric` / `imperial` / `auto` units.
+- **Dial gauges** — Three semi-circular dials (speed, height, battery) with auto-scaled ranges from your flight data; customizable colors and placement (including auto-stacking below the card).
+- **RC sticks** — Optional mini stick positions when your CSV includes RC channels.
+- **Transparent `.mov`** — Alpha-friendly output (`png` or `qtrle` codec).
+- **SRT export** — Optional subtitle track with the same selected fields.
+
 ## Why this stack
 
-- `opencv-python`: Fast frame I/O + drawing, practical for near real-time rendering on all major OSes.
-- `polars`: Robust and fast CSV ingestion for large telemetry exports.
-- `PyYAML`: Simple user-editable config file support.
-- `typer`: Clean CLI interface.
-- `numpy`: Fast interpolation of telemetry to video timestamps.
-
-This combination is reliable and easier to ship than browser pipelines for an offline CLI workflow.
+- **OpenCV** — Fast frame I/O and drawing for an offline CLI workflow on major OSes.
+- **Polars** — Quick CSV loads for large telemetry files.
+- **PyYAML** — Human-editable configs.
+- **Typer** — Straightforward CLI.
+- **NumPy** — Interpolating telemetry to video timestamps.
 
 ## Install
 
@@ -25,7 +41,7 @@ pip install -e .
 
 ## Run
 
-Generate transparent alpha overlay clip:
+Transparent alpha overlay (typical usage):
 
 ```bash
 opendronelog-overlay \
@@ -35,7 +51,9 @@ opendronelog-overlay \
   -v
 ```
 
-Generate SRT subtitles with selected telemetry:
+Use [`examples/gauges.config.yaml`](examples/gauges.config.yaml) instead of `overlay.config.yaml` when you want dial gauges enabled.
+
+Add SRT subtitles with the same telemetry selection:
 
 ```bash
 opendronelog-overlay \
@@ -46,85 +64,56 @@ opendronelog-overlay \
   -v
 ```
 
-Maximum logs (including ffmpeg info in transparent mode):
+Extra logging (includes ffmpeg detail in transparent mode): pass `-vv` instead of `-v`.
 
-```bash
-opendronelog-overlay \
-  --input-csv ./csv/FlightRecord_2026-03-17_11-22-12_.csv \
-  --config ./examples/overlay.config.yaml \
-  --output-video ./out/overlay-alpha.mov \
-  -vv
-```
+**Progress bar:** on by default; disable with `--no-progress`, or pass `--progress` to force it on.
 
-Progress bar controls:
+## Configuration
 
-- default: progress bar enabled
-- disable: `--no-progress`
-- enable explicitly: `--progress`
+Reference configs:
 
-## Config
+- [`examples/overlay.config.yaml`](examples/overlay.config.yaml) — Card, RC sticks, transparent output; gauges commented sample.
+- [`examples/gauges.config.yaml`](examples/gauges.config.yaml) — Same with **`gauges.enabled: true`**.
 
-See `examples/overlay.config.yaml`.
+Common options:
 
-- `telemetry.include`: choose which fields appear on the card and in SRT output.
-- `telemetry.unit_system`: `auto`, `metric`, or `imperial`.
-- `rc_sticks.enabled`: toggle mini joystick visualizer.
-- `transparent_output.*`: canvas/fps/codec for alpha clip output mode.
-- `style.panel_bg_hex`: background box color, for example `#1E2434`.
-- `style.label_text_hex`: label color, for example `#C8CDDC`.
-- `style.value_text_hex`: value color, for example `#EFF3F8`.
-- `style.muted_text_hex`: muted text color (section titles, stick labels), for example `#AAB2C2`.
+- `telemetry.include` — Fields on the card and in SRT.
+- `telemetry.unit_system` — `auto`, `metric`, or `imperial`.
+- `rc_sticks.enabled` — Mini joystick visualizer.
+- `transparent_output.*` — Canvas size, FPS, padding, `png` / `qtrle` codec.
+- `style.*_hex` — Panel and text colors (`panel_bg_hex`, `label_text_hex`, `value_text_hex`, `muted_text_hex`).
 
-## Experimental: Dial Gauges
+### Dial gauges
 
 > [!NOTE]
-> Dial gauges are an **experimental** feature, disabled by default. Enable with `gauges.enabled: true` in your config.
+> Gauges are **experimental** and **off** unless you set `gauges.enabled: true`.
 
-- `gauges.enabled`: enable/disable gauge rendering (default `false`).
-- `gauges.layout`: `horizontal` (default) or `vertical` — layout direction for the gauge strip.
-- `gauges.width` / `gauges.height`: size of each gauge dial in pixels (default `140`).
-- `gauges.x`: horizontal offset; set to `-1` to auto-position below the text panel (left-aligned, default `-1`).
-- `gauges.y`: vertical offset (default `28`, used when `gauges.x >= 0`).
-- `gauges.gap`: spacing between gauge dials (default `14`).
-- `gauges.arc_color_hex`: arc track color, for example `#2D3446`.
-- `gauges.needle_color_hex`: needle and active arc color, for example `#FF4D4F`.
-- `gauges.tick_color_hex`: tick mark color, for example `#6B7280`.
-- `gauges.label_color_hex`: gauge label text color, for example `#C8CDDC`.
-- `gauges.value_color_hex`: gauge value text color, for example `#EFF3F8`.
+When enabled, the renderer draws **speed**, **height**, and **battery** dials. Ranges scale from your telemetry (with sensible fallbacks). Placement: set `gauges.x` to `-1` to auto-stack full-width rows under the text panel (default), or use non-negative `gauges.x` / `gauges.y` with `gauges.layout` `horizontal` or `vertical`.
 
-Gauges render for `speed`, `height`, and `battery` fields. Value ranges are auto-scaled from telemetry data.
+If a gauge row lands below the frame, it is skipped—increase `transparent_output.height`, reduce `gauges.height` / `gauges.gap`, or turn off `rc_sticks` when you need more room for stacked dials.
 
-Supported telemetry field keys:
+| Key | Purpose |
+| --- | --- |
+| `gauges.enabled` | Turn gauge rendering on or off (default `false`). |
+| `gauges.layout` | `horizontal` or `vertical` (for manual `x`/`y` placement). |
+| `gauges.width` / `gauges.height` | Dial size in pixels (default height `140`; width ignored in auto placement). |
+| `gauges.x` | Horizontal offset; **`-1`** = auto placement below the card. |
+| `gauges.y` | Vertical offset when `gauges.x >= 0`. |
+| `gauges.gap` | Space between dials. |
+| `gauges.*_color_hex` | `arc`, `needle`, `tick`, `label`, and `value` colors. |
 
-- `height`
-- `speed`
-- `distance_to_home`
-- `battery`
-- `satellites`
-- `lat`
-- `lng`
-- `flight_mode`
-- `altitude`
-- `battery_voltage`
-- `battery_temp`
+Telemetry keys supported elsewhere in the overlay (card/SRT) include: `height`, `speed`, `distance_to_home`, `battery`, `satellites`, `lat`, `lng`, `flight_mode`, `altitude`, `battery_voltage`, `battery_temp`.
 
-## AirData CSV Conversion
+## AirData CSV conversion
 
-Some external software only accepts telemetry in AirData CSV format.
+Some tools only accept AirData-style CSV. For OpenDroneLog exports you can convert using:
 
-If your CSV exports are from OpenDroneLog, convert them first using one of these options:
-
-- Web converter: https://open-dronelog.streamlit.app/
+- Web: https://open-dronelog.streamlit.app/
 - Local script: `opendronelog_overlay/ODL_2_AD.py`
-
-Example local conversion:
 
 ```bash
 python ./opendronelog_overlay/ODL_2_AD.py ./input_odl.csv ./output_airdata.csv
 ```
-
-Then use `./output_airdata.csv` with software that requires AirData-style columns.
-
 
 ## Love this project?
 
@@ -138,9 +127,8 @@ If you find this project helpful, please consider:
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/arpandesign)
 
-
 ## Notes
 
-- The tool assumes `time_s` in CSV starts near 0 and tracks video timeline.
-- Output writes transparent `.mov` clips with alpha using `png` (default) or `qtrle` codec.
-- `--output-srt` writes subtitle cues at 1 second intervals and merges unchanged consecutive lines.
+- CSV `time_s` is assumed to start near `0` and follow the video timeline.
+- Transparent output uses `.mov` with alpha (`png` codec by default, or `qtrle`).
+- `--output-srt` emits cues every second and merges consecutive identical lines.
