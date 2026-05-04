@@ -35,3 +35,4 @@ out/
 *.mov
 *.mp4
 *.avi
+.cursor/

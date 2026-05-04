@@ -19,7 +19,14 @@ NUMERIC_FIELD_ALIASES = {
     "height": ["height_m", "height_ft"],
     "distance_to_home": ["distance_to_home_m", "distance_to_home_ft"],
     "altitude": ["altitude_m", "altitude_ft"],
-    "speed": ["speed_ms", "speed_mph"],
+    "speed": [
+        "speed_ms",
+        "speed_mph",
+        "speed_kmh",
+        "speed(m/s)",
+        "speed(mph)",
+        "speed(km/h)",
+    ],
     "battery": ["battery_percent"],
     "battery_voltage": ["battery_voltage_v"],
     "battery_temp": ["battery_temp_c", "battery_temp_f"],
@@ -45,6 +52,13 @@ def _pick_first_existing(columns: list[str], aliases: list[str]) -> str | None:
 
 
 def _extract_unit(column_name: str) -> str:
+    name = column_name.strip().lower()
+    if "(m/s)" in name:
+        return "m/s"
+    if "(mph)" in name:
+        return "mph"
+    if "(km/h)" in name:
+        return "km/h"
     if column_name.endswith("_m"):
         return "m"
     if column_name.endswith("_ft"):
@@ -53,6 +67,8 @@ def _extract_unit(column_name: str) -> str:
         return "m/s"
     if column_name.endswith("_mph"):
         return "mph"
+    if column_name.endswith("_kmh"):
+        return "km/h"
     if column_name.endswith("_c"):
         return "C"
     if column_name.endswith("_f"):
@@ -138,6 +154,10 @@ def _convert_units_if_needed(
             return values * 0.44704, "m/s"
         if source_unit == "m/s" and unit_system == "imperial":
             return values * 2.23694, "mph"
+        if source_unit == "km/h" and unit_system == "metric":
+            return values * (1000.0 / 3600.0), "m/s"
+        if source_unit == "km/h" and unit_system == "imperial":
+            return values * 0.621371, "mph"
 
     if field == "battery_temp":
         if source_unit == "F" and unit_system == "metric":

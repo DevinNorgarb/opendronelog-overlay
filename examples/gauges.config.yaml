@@ -15,9 +15,9 @@ style:
   muted_text_hex: "#AAB2C2"
 
 transparent_output:
-  width: 1920
-  height: 1080
-  fps: 24
+  width: 1920  # 3840x2160 4k resolution
+  height: 1080  # 3840x2160 4k resolution
+  fps: 24  # 24fps is standard for 4k video
   duration_pad_s: 0.0
   # png or qtrle (both keep alpha in .mov). png is usually safer in preview apps.
   codec: png
@@ -64,18 +64,16 @@ rc_sticks:
   size: 54
   gap: 12
 
-# Experimental dial gauges (speed, height, battery).
-# Enable to render gauge dials alongside the text panel.
-# gauges:
-#   enabled: true
-#   layout: horizontal       # used for manual x/y placement only
-#   width: 140               # used for manual x/y placement only
-#   height: 140
-#   x: -1                    # -1 = auto-stack vertical full-width rows below text panel
-#   y: 28                    # used when x >= 0
-#   gap: 14
-#   arc_color_hex: "#2D3446"
-#   needle_color_hex: "#FF4D4F"
-#   tick_color_hex: "#6B7280"
-#   label_color_hex: "#C8CDDC"
-#   value_color_hex: "#EFF3F8"
+gauges:
+  enabled: true
+  layout: horizontal       # used for manual x/y placement only
+  width: 140               # used for manual x/y placement only
+  height: 140
+  x: -1                    # -1 = auto-stack vertical full-width rows below text panel
+  y: 28                    # used when x >= 0
+  gap: 14
+  arc_color_hex: "#2D3446"
+  needle_color_hex: "#FF4D4F"
+  tick_color_hex: "#6B7280"
+  label_color_hex: "#C8CDDC"
+  value_color_hex: "#EFF3F8"

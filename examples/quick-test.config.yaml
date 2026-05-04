@@ -36,3 +36,7 @@ rc_sticks:
   title: RC STICKS
   size: 54
   gap: 12
+
+# Experimental dial gauges (speed, height, battery).
+# gauges:
+#   enabled: false
