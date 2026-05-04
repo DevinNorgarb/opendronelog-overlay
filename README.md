@@ -34,7 +34,7 @@ Enable gauges in YAML with `gauges.enabled: true`. See [`examples/gauges.config.
 ## Install
 
 ```bash
-git clone https://github.com/arpanghosh8453/opendronelog-overlay.git
+git clone https://github.com/DevinNorgarb/opendronelog-overlay.git
 cd opendronelog-overlay
 pip install -e .
 ```
