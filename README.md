@@ -115,18 +115,6 @@ Some tools only accept AirData-style CSV. For OpenDroneLog exports you can conve
 python ./opendronelog_overlay/ODL_2_AD.py ./input_odl.csv ./output_airdata.csv
 ```
 
-## Love this project?
-
-Maintaining and improving this project takes a significant amount of my free time. Your support helps keep me motivated to add new features and work on similar projects that benefit the community.
-
-If you find this project helpful, please consider:
-
-⭐ Starring this repository to show your support and spread the news!
-
-☕ Buying me a coffee if you'd like to contribute to its maintenance and future development.
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/arpandesign)
-
 ## Notes
 
 - CSV `time_s` is assumed to start near `0` and follow the video timeline.
