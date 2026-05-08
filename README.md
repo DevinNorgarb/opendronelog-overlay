@@ -1,6 +1,6 @@
-# OpenDroneLog Overlay
+# Flightframe Telemetry Overlay
 
-Configurable telemetry overlay for drone video exports: a translucent **metrics card**, optional **RC stick** visualization, and optional **dial gauges** for speed, altitude, and battery—rendered to a transparent clip or paired with **SRT** subtitles.
+Flightframe turns drone telemetry into **cinematic overlays**: a translucent **metrics card**, optional **RC sticks**, and optional **dial gauges**—rendered to a transparent clip for your editor, plus optional **SRT** subtitles that match the overlay.
 
 > [!IMPORTANT]
 > *DJI is a registered trademark of SZ DJI Technology Co., Ltd. DroneLogbook® is a registered trademark of DroneAnalytics Inc. Litchi is a trademark of VC Technology Ltd. Airdata or Airdata UAV is a trademark of Airdata UAV, Inc. This project is independent and is not affiliated with, sponsored by, authorized by, or endorsed by SZ DJI Technology Co., Ltd., DroneAnalytics Inc., VC Technology Ltd., Airdata UAV, Inc., or their affiliates.*
@@ -44,7 +44,7 @@ pip install -e .
 Transparent alpha overlay (typical usage):
 
 ```bash
-opendronelog-overlay render \
+flightframe render \
   --input-csv ./csv/FlightRecord_2026-03-17_11-22-12_.csv \
   --config ./examples/overlay.config.yaml \
   --output-video ./out/overlay-alpha.mov \
@@ -56,7 +56,7 @@ Use [`examples/gauges.config.yaml`](examples/gauges.config.yaml) instead of `ove
 Add SRT subtitles with the same telemetry selection:
 
 ```bash
-opendronelog-overlay render \
+flightframe render \
   --input-csv ./csv/FlightRecord_2026-03-17_11-22-12_.csv \
   --config ./examples/overlay.config.yaml \
   --output-video ./out/overlay-alpha.mov \
@@ -69,7 +69,7 @@ opendronelog-overlay render \
 If your CSV `time_s` is slightly ahead/behind the video, you can shift telemetry sampling with:
 
 ```bash
-opendronelog-overlay render \
+flightframe render \
   --input-csv ./csv/FlightRecord.csv \
   --config ./examples/overlay.config.yaml \
   --output-video ./out/overlay-alpha.mov \
@@ -86,7 +86,7 @@ Offset convention: the overlay samples telemetry at \(t_{telemetry} = t_{video} 
 To export subtitles without creating a `.mov` overlay:
 
 ```bash
-opendronelog-overlay srt \
+flightframe srt \
   --input-csv ./csv/FlightRecord.csv \
   --config ./examples/overlay.config.yaml \
   --output-srt ./out/overlay-telemetry.srt \
@@ -102,7 +102,7 @@ Extra logging (includes ffmpeg detail in transparent mode): pass `-vv` instead o
 DJI “`.txt`” flight logs are a binary format. Convert them to a CSV that this tool can ingest:
 
 ```bash
-opendronelog-overlay import-dji \
+flightframe import-dji \
   --input-txt "/path/to/DJIFlightRecord_2024-12-30_[21-34-15].txt" \
   --output-csv ./out/flight.csv \
   --output-airdata-csv ./out/flight.airdata.csv
@@ -157,10 +157,10 @@ Telemetry keys supported elsewhere in the overlay (card/SRT) include: `height`, 
 Some tools only accept AirData-style CSV. For OpenDroneLog exports you can convert using:
 
 - Web: https://open-dronelog.streamlit.app/
-- Local script: `opendronelog_overlay/ODL_2_AD.py`
+- Local script: `flightframe/ODL_2_AD.py`
 
 ```bash
-python ./opendronelog_overlay/ODL_2_AD.py ./input_odl.csv ./output_airdata.csv
+python ./flightframe/ODL_2_AD.py ./input_odl.csv ./output_airdata.csv
 ```
 
 ## Notes

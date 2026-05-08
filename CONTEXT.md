@@ -1,4 +1,4 @@
-# OpenDroneLog Overlay
+# Flightframe Telemetry Overlay
 
 A local-first toolchain for turning drone telemetry logs into video overlays (transparent clips) and SRT subtitles.
 

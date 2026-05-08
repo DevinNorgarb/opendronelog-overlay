@@ -9,11 +9,17 @@ import numpy as np
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 
-from opendronelog_overlay.ODL_2_AD import convert_odl_to_airdata
-from opendronelog_overlay.cli import render as cli_render
-from opendronelog_overlay.config import ComponentRect, OverlayComponent, OverlayConfig, dump_config_yaml, load_config
-from opendronelog_overlay.csv_parser import load_telemetry
-from opendronelog_overlay.dji_import import convert_dji_txt_to_odl_csv_via_djirecord
+from flightframe.ODL_2_AD import convert_odl_to_airdata
+from flightframe.cli import render as cli_render
+from flightframe.csv_parser import TelemetryData, load_telemetry
+from flightframe.dji_import import convert_dji_txt_to_odl_csv_via_djirecord
+from opendronelog_overlay.config import (
+    ComponentRect,
+    OverlayComponent,
+    OverlayConfig,
+    dump_config_yaml,
+    load_config,
+)
 from opendronelog_overlay.renderer import _draw_overlay_rgba
 
 
@@ -459,8 +465,6 @@ with tab_build:
     if st.button("Preview overlay frame (layout only)"):
         dummy = np.zeros((cfg.transparent_output.height, cfg.transparent_output.width, 4), dtype=np.uint8)
         # Create minimal telemetry arrays to satisfy renderer; values will be zeros.
-        from opendronelog_overlay.csv_parser import TelemetryData
-
         telem = TelemetryData(
             time_s=np.array([0.0, 1.0], dtype=np.float64),
             numeric={},

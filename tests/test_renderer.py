@@ -8,10 +8,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from opendronelog_overlay.config import OverlayConfig
-from opendronelog_overlay.csv_parser import TelemetryData, load_telemetry
-from opendronelog_overlay.encoding import NullFrameEncoder
-from opendronelog_overlay.renderer import (
+from flightframe.config import OverlayConfig
+from flightframe.csv_parser import TelemetryData, load_telemetry
+from flightframe.encoding import NullFrameEncoder
+from flightframe.renderer import (
     GAUGE_END_DEG,
     GAUGE_START_DEG,
     GAUGE_SWEEP,

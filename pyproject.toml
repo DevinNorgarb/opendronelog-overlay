@@ -1,7 +1,7 @@
 [project]
-name = "opendronelog-overlay"
+name = "flightframe-telemetry-overlay"
 version = "0.1.0"
-description = "Configurable telemetry card overlay for drone videos"
+description = "Flightframe: cinematic telemetry overlays and subtitles for drone videos"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -15,6 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
+flightframe = "flightframe.cli:app"
 opendronelog-overlay = "opendronelog_overlay.cli:app"
 
 [build-system]
@@ -23,4 +24,4 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["opendronelog_overlay*"]
+include = ["flightframe*", "opendronelog_overlay*"]
