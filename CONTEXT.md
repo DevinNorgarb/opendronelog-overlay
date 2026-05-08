@@ -4,6 +4,18 @@ A local-first toolchain for turning drone telemetry logs into video overlays (tr
 
 ## Language
 
+**Overlay component**:
+A reusable, positionable overlay element (e.g. a value card, RC sticks, a gauge, or a sparkline) that can be placed on the transparent output canvas.
+_Avoid_: widget (too generic), layer (ambiguous with ordering)
+
+**Canvas**:
+The transparent output frame surface that components are positioned on, sized by `transparent_output.width` and `transparent_output.height`.
+_Avoid_: screen (ambiguous with device display), viewport (UI-specific)
+
+**Theme**:
+A global set of default style values (colors/typography) applied to overlay components unless a component overrides them.
+_Avoid_: palette (too narrow), style (too broad)
+
 **Telemetry log**:
 A time series of flight data exported as CSV, sampled over time.
 _Avoid_: log file, flight log (too broad)
