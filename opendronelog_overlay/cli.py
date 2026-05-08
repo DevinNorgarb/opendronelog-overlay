@@ -15,9 +15,64 @@ from .srt_exporter import export_srt
 app = typer.Typer(help="Drone telemetry overlay renderer")
 
 
+def _resolve_input_path(
+    *,
+    explicit_path: Path | None,
+    search_dir: Path | None,
+    patterns: list[str],
+    kind: str,
+) -> Path:
+    """
+    Resolve an input file from either an explicit path or a directory search.
+
+    - If explicit_path is a file, it is returned.
+    - If explicit_path is a directory, it is searched.
+    - If explicit_path is None, search_dir must be a directory and will be searched.
+
+    Search selects the most recently modified matching file.
+    """
+    base: Path | None = explicit_path if explicit_path is not None else search_dir
+    if base is None:
+        raise typer.BadParameter(f"Missing input: pass --{kind} or --input-dir")
+
+    if base.exists() and base.is_file():
+        return base
+
+    if not (base.exists() and base.is_dir()):
+        raise typer.BadParameter(f"{kind} must be a file or directory, got: {base}")
+
+    matches: list[Path] = []
+    for pat in patterns:
+        matches.extend(sorted(base.glob(pat)))
+    matches = [p for p in matches if p.is_file()]
+
+    if not matches:
+        raise typer.BadParameter(
+            f"Could not find any {kind} files in {base} matching: {', '.join(patterns)}"
+        )
+
+    matches.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    return matches[0]
+
+
 @app.command()
 def render(
-    input_csv: Path = typer.Option(..., "--input-csv", exists=True, readable=True),
+    input_csv: Path | None = typer.Option(
+        None,
+        "--input-csv",
+        exists=True,
+        readable=True,
+        help="Telemetry CSV file (or a directory to auto-pick the newest matching CSV)",
+    ),
+    input_dir: Path | None = typer.Option(
+        None,
+        "--input-dir",
+        exists=True,
+        readable=True,
+        file_okay=False,
+        dir_okay=True,
+        help="Directory to auto-detect the newest telemetry CSV",
+    ),
     output_video: Path = typer.Option(..., "--output-video"),
     config: Path | None = typer.Option(None, "--config", exists=True, readable=True),
     output_srt: Path | None = typer.Option(None, "--output-srt", help="Optional SRT output path for selected telemetry"),
@@ -39,9 +94,16 @@ def render(
     logging.basicConfig(level=level, format="[%(levelname)s] %(message)s")
     logger = logging.getLogger(__name__)
 
+    resolved_csv = _resolve_input_path(
+        explicit_path=input_csv,
+        search_dir=input_dir,
+        patterns=["FlightRecord*.csv", "*.csv"],
+        kind="input-csv",
+    )
+
     logger.info("Loading config and telemetry")
     cfg = load_config(config)
-    telemetry = load_telemetry(input_csv, unit_system=cfg.telemetry.unit_system)
+    telemetry = load_telemetry(resolved_csv, unit_system=cfg.telemetry.unit_system)
     logger.info("Telemetry loaded: %d samples", len(telemetry.time_s))
 
     output_video.parent.mkdir(parents=True, exist_ok=True)
@@ -70,7 +132,22 @@ def render(
 
 @app.command("import-dji")
 def import_dji(
-    input_txt: Path = typer.Option(..., "--input-txt", exists=True, readable=True, help="DJI FlightRecord .txt file"),
+    input_txt: Path | None = typer.Option(
+        None,
+        "--input-txt",
+        exists=True,
+        readable=True,
+        help="DJI FlightRecord .txt file (or a directory to auto-pick the newest matching .txt)",
+    ),
+    input_dir: Path | None = typer.Option(
+        None,
+        "--input-dir",
+        exists=True,
+        readable=True,
+        file_okay=False,
+        dir_okay=True,
+        help="Directory to auto-detect the newest DJI FlightRecord .txt",
+    ),
     output_csv: Path = typer.Option(..., "--output-csv", help="Output CSV with `time_s` for opendronelog-overlay"),
     output_airdata_csv: Path | None = typer.Option(
         None,
@@ -90,8 +167,14 @@ def import_dji(
     ),
 ) -> None:
     """Convert DJI FlightRecord .txt (binary) into CSV(s) usable by this project."""
+    resolved_txt = _resolve_input_path(
+        explicit_path=input_txt,
+        search_dir=input_dir,
+        patterns=["DJIFlightRecord*.txt", "*FlightRecord*.txt", "*.txt"],
+        kind="input-txt",
+    )
     res = convert_dji_txt_to_odl_csv_via_djirecord(
-        input_txt=input_txt,
+        input_txt=resolved_txt,
         output_csv=output_csv,
         api_key=api_key,
         no_verify=no_verify,
@@ -105,7 +188,22 @@ def import_dji(
 
 @app.command()
 def srt(
-    input_csv: Path = typer.Option(..., "--input-csv", exists=True, readable=True),
+    input_csv: Path | None = typer.Option(
+        None,
+        "--input-csv",
+        exists=True,
+        readable=True,
+        help="Telemetry CSV file (or a directory to auto-pick the newest matching CSV)",
+    ),
+    input_dir: Path | None = typer.Option(
+        None,
+        "--input-dir",
+        exists=True,
+        readable=True,
+        file_okay=False,
+        dir_okay=True,
+        help="Directory to auto-detect the newest telemetry CSV",
+    ),
     output_srt: Path = typer.Option(..., "--output-srt"),
     config: Path | None = typer.Option(None, "--config", exists=True, readable=True),
     telemetry_offset_s: float = typer.Option(
@@ -125,9 +223,16 @@ def srt(
     logging.basicConfig(level=level, format="[%(levelname)s] %(message)s")
     logger = logging.getLogger(__name__)
 
+    resolved_csv = _resolve_input_path(
+        explicit_path=input_csv,
+        search_dir=input_dir,
+        patterns=["FlightRecord*.csv", "*.csv"],
+        kind="input-csv",
+    )
+
     logger.info("Loading config and telemetry")
     cfg = load_config(config)
-    telemetry = load_telemetry(input_csv, unit_system=cfg.telemetry.unit_system)
+    telemetry = load_telemetry(resolved_csv, unit_system=cfg.telemetry.unit_system)
     logger.info("Telemetry loaded: %d samples", len(telemetry.time_s))
 
     output_srt.parent.mkdir(parents=True, exist_ok=True)

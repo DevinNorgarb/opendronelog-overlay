@@ -58,3 +58,31 @@ class TestDjiImportMapping:
         with pytest.raises(ValueError, match="time column"):
             _map_djirecord_csv_to_odl_csv(raw_csv=raw, output_csv=out)
 
+    def test_accepts_osd_flytime_column_case_insensitive(self):
+        raw = _write_csv(
+            ["CUSTOM.dateTime", "OSD.flyTime", "OSD.latitude", "OSD.longitude", "OSD.height", "OSD.hSpeed"],
+            [
+                {
+                    "CUSTOM.dateTime": "2026-01-01T00:00:00Z",
+                    "OSD.flyTime": "10",
+                    "OSD.latitude": "1",
+                    "OSD.longitude": "2",
+                    "OSD.height": "3",
+                    "OSD.hSpeed": "4",
+                },
+                {
+                    "CUSTOM.dateTime": "2026-01-01T00:00:01Z",
+                    "OSD.flyTime": "11",
+                    "OSD.latitude": "1",
+                    "OSD.longitude": "2",
+                    "OSD.height": "3",
+                    "OSD.hSpeed": "4",
+                },
+            ],
+        )
+        out = Path(tempfile.NamedTemporaryFile(suffix=".csv", delete=False).name)
+        _map_djirecord_csv_to_odl_csv(raw_csv=raw, output_csv=out)
+        rows = _read_rows(out)
+        assert rows[0]["time_s"] == "0"
+        assert rows[1]["time_s"] == "1"
+
