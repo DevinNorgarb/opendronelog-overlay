@@ -151,3 +151,34 @@ class TestBackwardCompatibility:
         cfg = load_config(Path(tmp.name))
         assert cfg.gauges.enabled is False
         assert cfg.rc_sticks.enabled is True
+
+
+class TestComponentsSchema:
+    def test_components_require_unique_ids(self):
+        raw = {
+            "video": {"x": 28, "y": 28, "width": 260},
+            "transparent_output": {"width": 1920, "height": 1080, "fps": 30, "codec": "png"},
+            "telemetry": {"include": ["height", "speed", "battery"], "unit_system": "auto"},
+            "components": [
+                {"id": "a", "type": "value_card", "rect": {"x": 0, "y": 0, "w": 100, "h": 100}},
+                {"id": "a", "type": "value_card", "rect": {"x": 10, "y": 10, "w": 100, "h": 100}},
+            ],
+        }
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
+        yaml.dump(raw, tmp)
+        tmp.close()
+        with pytest.raises(ValueError, match="Duplicate component id"):
+            load_config(Path(tmp.name))
+
+    def test_theme_is_validated(self):
+        raw = {
+            "video": {"x": 28, "y": 28, "width": 260},
+            "transparent_output": {"width": 1920, "height": 1080, "fps": 30, "codec": "png"},
+            "telemetry": {"include": ["height", "speed", "battery"], "unit_system": "auto"},
+            "theme": {"accent_hex": "not-a-color"},
+        }
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
+        yaml.dump(raw, tmp)
+        tmp.close()
+        with pytest.raises(ValueError, match="theme.accent_hex"):
+            load_config(Path(tmp.name))
