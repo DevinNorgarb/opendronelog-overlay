@@ -184,6 +184,14 @@ def _pick_time_key(headers: list[str]) -> tuple[str, str]:
     """
     Returns (column_name, unit) where unit is 's' or 'ms'.
     """
+    lower_to_orig = {h.strip().lower(): h for h in headers}
+
+    def has(col: str) -> bool:
+        return col.strip().lower() in lower_to_orig
+
+    def orig(col: str) -> str:
+        return lower_to_orig[col.strip().lower()]
+
     candidates_ms = [
         "time(millisecond)",
         "time_ms",
@@ -191,26 +199,29 @@ def _pick_time_key(headers: list[str]) -> tuple[str, str]:
         "time_millis",
     ]
     for c in candidates_ms:
-        if c in headers:
-            return c, "ms"
+        if has(c):
+            return orig(c), "ms"
 
     candidates_s = [
         "time_s",
         "fly_time",
         "time",
         "timestamp_s",
+        "osd.flytime",
     ]
     for c in candidates_s:
-        if c in headers:
-            return c, "s"
+        if has(c):
+            return orig(c), "s"
 
     raise ValueError(f"Could not find a time column in djirecord CSV headers: {headers[:40]}")
 
 
 def _first_existing(headers: list[str], candidates: list[str]) -> str | None:
+    lower_to_orig = {h.strip().lower(): h for h in headers}
     for c in candidates:
-        if c in headers:
-            return c
+        key = c.strip().lower()
+        if key in lower_to_orig:
+            return lower_to_orig[key]
     return None
 
 
@@ -224,7 +235,7 @@ def _build_field_map(headers: list[str]) -> dict[str, str]:
     if lng:
         m["lng"] = lng
 
-    m_h = _first_existing(headers, ["height_m", "height", "osd.height", "ultrasonicHeight"])
+    m_h = _first_existing(headers, ["height_m", "height", "osd.height", "ultrasonicheight", "osd.vpsheight"])
     if m_h:
         m["height_m"] = m_h
 
@@ -236,19 +247,19 @@ def _build_field_map(headers: list[str]) -> dict[str, str]:
     if batt:
         m["battery_percent"] = batt
 
-    sats = _first_existing(headers, ["satellites", "gps_num", "osd.gps_num"])
+    sats = _first_existing(headers, ["satellites", "gps_num", "osd.gps_num", "osd.gpsnum"])
     if sats:
         m["satellites"] = sats
 
-    mode = _first_existing(headers, ["flight_mode", "flycState", "flycStateRaw", "osd.flyc_state"])
+    mode = _first_existing(headers, ["flight_mode", "flycstate", "flycstateraw", "osd.flyc_state", "osd.flycstate"])
     if mode:
         m["flight_mode"] = mode
 
     for k, cands in {
-        "rc_aileron": ["rc_aileron", "Rc_aileron", "rc.aileron"],
-        "rc_elevator": ["rc_elevator", "Rc_elevator", "rc.elevator"],
-        "rc_throttle": ["rc_throttle", "Rc_throttle", "rc.throttle"],
-        "rc_rudder": ["rc_rudder", "Rc_rudder", "rc.rudder"],
+        "rc_aileron": ["rc_aileron", "rc.aileron"],
+        "rc_elevator": ["rc_elevator", "rc.elevator"],
+        "rc_throttle": ["rc_throttle", "rc.throttle"],
+        "rc_rudder": ["rc_rudder", "rc.rudder"],
     }.items():
         found = _first_existing(headers, cands)
         if found:
@@ -258,10 +269,19 @@ def _build_field_map(headers: list[str]) -> dict[str, str]:
 
 
 def _extract_speed_value(row: dict[str, str], headers: list[str]) -> tuple[float | None, str]:
+    lower_to_orig = {h.strip().lower(): h for h in headers}
+    def has(col: str) -> bool:
+        return col.strip().lower() in lower_to_orig
+    def get(col: str) -> str | None:
+        k = col.strip().lower()
+        if k not in lower_to_orig:
+            return None
+        return row.get(lower_to_orig[k])
+
     # Prefer explicit m/s columns if present.
-    for key in ["speed_ms", "speed(m/s)", "speed", "osd.speed"]:
-        if key in headers:
-            v = _parse_float(row.get(key))
+    for key in ["speed_ms", "speed(m/s)", "speed", "osd.speed", "osd.hspeed", "osd.xspeed", "osd.yspeed", "osd.zspeed"]:
+        if has(key):
+            v = _parse_float(get(key))
             if v is not None:
                 return v, "ms"
 

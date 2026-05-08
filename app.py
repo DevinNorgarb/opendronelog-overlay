@@ -12,6 +12,7 @@ from opendronelog_overlay.ODL_2_AD import convert_odl_to_airdata
 from opendronelog_overlay.cli import render as cli_render
 from opendronelog_overlay.config import load_config
 from opendronelog_overlay.csv_parser import load_telemetry
+from opendronelog_overlay.dji_import import convert_dji_txt_to_odl_csv_via_djirecord
 from opendronelog_overlay.renderer import _draw_overlay_rgba
 
 
@@ -143,17 +144,90 @@ with tab_render:
     with col_a:
         video_file = st.file_uploader("Video file", type=["mp4", "mov", "mkv", "avi"])
     with col_b:
-        csv_file = st.file_uploader("Telemetry CSV (must include `time_s`)", type=["csv"])
+        telemetry_source = st.radio("Telemetry source", ["CSV (time_s)", "DJI FlightRecord .txt"], horizontal=True)
+
+        csv_file = None
+        txt_file = None
+        if telemetry_source.startswith("CSV"):
+            csv_file = st.file_uploader("Telemetry CSV (must include `time_s`)", type=["csv"])
+        else:
+            txt_file = st.file_uploader("DJI FlightRecord .txt (binary)", type=["txt"])
 
     config_file = st.file_uploader("Optional YAML config", type=["yaml", "yml"])
 
-    if video_file and csv_file:
+    resolved_csv_path: Path | None = None
+    generated_airdata_path: Path | None = None
+
+    if "dji_import_csv_path" in st.session_state:
+        try:
+            p = Path(st.session_state["dji_import_csv_path"])
+            if p.exists():
+                resolved_csv_path = p
+        except Exception:
+            pass
+
+    if video_file and telemetry_source.startswith("CSV") and csv_file:
         video_path = _save_upload_to_temp(video_file, suffix=Path(video_file.name).suffix or ".mp4")
-        csv_path = _save_upload_to_temp(csv_file, suffix=".csv")
+        resolved_csv_path = _save_upload_to_temp(csv_file, suffix=".csv")
         cfg_path = None
         if config_file is not None:
             cfg_path = _save_upload_to_temp(config_file, suffix=Path(config_file.name).suffix or ".yaml")
 
+    if video_file and telemetry_source.startswith("DJI") and txt_file:
+        video_path = _save_upload_to_temp(video_file, suffix=Path(video_file.name).suffix or ".mp4")
+        cfg_path = None
+        if config_file is not None:
+            cfg_path = _save_upload_to_temp(config_file, suffix=Path(config_file.name).suffix or ".yaml")
+
+        st.markdown("**DJI .txt import** uses the external `djirecord` command (install via `pipx install pydjirecord`).")
+        dji_api_key = st.text_input("DJI API key (only needed for v13+ encrypted logs)", type="password")
+        dji_no_verify = st.checkbox("Disable TLS verification (djirecord --no-verify)", value=False)
+        make_airdata = st.checkbox("Also generate AirData CSV", value=True)
+
+        if st.button("Import DJI .txt → CSV"):
+            with st.spinner("Decoding DJI FlightRecord..."):
+                txt_path = _save_upload_to_temp(txt_file, suffix=".txt")
+                out_dir = Path(tempfile.mkdtemp(prefix="odl-dji-ui-"))
+                out_csv = out_dir / "flight.csv"
+                res = convert_dji_txt_to_odl_csv_via_djirecord(
+                    input_txt=txt_path,
+                    output_csv=out_csv,
+                    api_key=(dji_api_key or None),
+                    no_verify=dji_no_verify,
+                )
+                resolved_csv_path = res.odl_csv_path
+                st.session_state["dji_import_csv_path"] = str(resolved_csv_path)
+
+                if make_airdata:
+                    airdata_csv = out_dir / "flight.airdata.csv"
+                    convert_odl_to_airdata(resolved_csv_path, airdata_csv)
+                    generated_airdata_path = airdata_csv
+                    st.session_state["dji_import_airdata_path"] = str(airdata_csv)
+
+            st.success("Import complete")
+
+        if "dji_import_airdata_path" in st.session_state and generated_airdata_path is None:
+            try:
+                p = Path(st.session_state["dji_import_airdata_path"])
+                if p.exists():
+                    generated_airdata_path = p
+            except Exception:
+                pass
+
+        if resolved_csv_path is not None and resolved_csv_path.exists():
+            st.download_button(
+                "Download imported overlay-ready CSV",
+                data=resolved_csv_path.read_bytes(),
+                file_name="flight.csv",
+            )
+        if generated_airdata_path is not None and generated_airdata_path.exists():
+            st.download_button(
+                "Download imported AirData CSV",
+                data=generated_airdata_path.read_bytes(),
+                file_name="flight.airdata.csv",
+            )
+
+    if video_file and resolved_csv_path is not None:
         st.subheader("2) Pick calibration event + offset")
         fps, frame_count, width, height = _video_info(video_path)
         duration_s = frame_count / fps
@@ -174,13 +248,13 @@ with tab_render:
         with col_p1:
             if st.button("Generate preview frame"):
                 with st.spinner("Rendering preview frame..."):
-                    frame = _render_preview_frame(video_path, csv_path, cfg_path, event_time_s, telemetry_offset_s)
+                    frame = _render_preview_frame(video_path, resolved_csv_path, cfg_path, event_time_s, telemetry_offset_s)
                 st.image(frame, caption=f"Preview frame @ t={event_time_s:.2f}s (offset={telemetry_offset_s:+.2f}s)", channels="BGR")
         with col_p2:
             if st.button("Generate preview clip"):
                 with st.spinner("Rendering preview clip..."):
                     preview_path = _render_preview_clip(
-                        video_path, csv_path, cfg_path, event_time_s, telemetry_offset_s, clip_len_s=clip_len_s
+                        video_path, resolved_csv_path, cfg_path, event_time_s, telemetry_offset_s, clip_len_s=clip_len_s
                     )
                 st.video(str(preview_path))
                 st.download_button("Download preview clip", data=preview_path.read_bytes(), file_name="preview.mp4")
@@ -194,7 +268,7 @@ with tab_render:
                 out_srt = out_dir / f"{out_name}.srt"
 
                 cli_render(
-                    input_csv=csv_path,
+                    input_csv=resolved_csv_path,
                     output_video=out_overlay,
                     config=cfg_path,
                     output_srt=out_srt,
@@ -208,7 +282,7 @@ with tab_render:
             st.download_button("Download subtitles (.srt)", data=out_srt.read_bytes(), file_name=out_srt.name)
 
     else:
-        st.info("Upload a video and a telemetry CSV to begin.")
+        st.info("Upload a video and pick a telemetry source to begin.")
 
 with tab_convert:
     st.subheader("Convert OpenDroneLog CSV → AirData CSV")
