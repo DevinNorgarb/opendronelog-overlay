@@ -3,16 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 import math
-import subprocess
 import sys
 import time
 
 import cv2
 import numpy as np
-from imageio_ffmpeg import get_ffmpeg_exe
 
 from .config import OverlayConfig
 from .csv_parser import TelemetryData
+from .encoding import FfmpegEncodingConfig, FfmpegFrameEncoder, FrameEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -136,42 +135,17 @@ def _encode_transparent_overlay_frames(
     show_progress: bool,
     verbose: bool,
 ) -> None:
-    ffmpeg = get_ffmpeg_exe()
     codec = config.transparent_output.codec
-    output_pix_fmt = "rgba" if codec == "png" else "argb"
-
-    cmd = [
-        ffmpeg,
-        "-y",
-        "-hide_banner",
-        "-loglevel",
-        "info" if verbose else "error",
-        "-nostats",
-        "-f",
-        "rawvideo",
-        "-pix_fmt",
-        "bgra",
-        "-s",
-        f"{info.width}x{info.height}",
-        "-r",
-        f"{info.fps}",
-        "-i",
-        "-",
-        "-an",
-        "-c:v",
-        codec,
-        "-pix_fmt",
-        output_pix_fmt,
-        output_video_path,
-    ]
-
     logger.info("Launching ffmpeg encoder (%s)", codec)
-
-    proc = subprocess.Popen(
-        cmd,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.DEVNULL,
-        stderr=None if verbose else subprocess.PIPE,
+    encoder = FfmpegFrameEncoder(
+        FfmpegEncodingConfig(
+            output_path=output_video_path,
+            width=info.width,
+            height=info.height,
+            fps=info.fps,
+            codec=codec,
+            verbose=verbose,
+        )
     )
 
     progress_bar = ProgressReporter(
@@ -179,34 +153,41 @@ def _encode_transparent_overlay_frames(
         desc="Encoding transparent overlay",
         enabled=show_progress,
     )
-
-    err_bytes: bytes | None = None
     try:
-        assert proc.stdin is not None
+        _render_overlay_frames_to_encoder(
+            encoder=encoder,
+            telemetry=telemetry,
+            config=config,
+            info=info,
+            progress_bar=progress_bar,
+        )
+    finally:
+        progress_bar.close()
+
+    logger.info("Transparent overlay encoding complete")
+
+
+def _render_overlay_frames_to_encoder(
+    encoder: FrameEncoder,
+    telemetry: TelemetryData,
+    config: OverlayConfig,
+    info: TransparentInfo,
+    progress_bar: ProgressReporter,
+) -> None:
+    try:
         for frame_idx in range(info.frame_count):
             t = frame_idx / info.fps
             frame = np.zeros((info.height, info.width, 4), dtype=np.uint8)
             frame = _draw_overlay_rgba(frame, t, telemetry, config)
-            proc.stdin.write(frame.tobytes())
+            encoder.write(frame)
             progress_bar.update(1)
-
-        proc.stdin.close()
-        _, err_bytes = proc.communicate()
+        encoder.close()
     except Exception:
-        progress_bar.close()
-        proc.kill()
-        proc.wait(timeout=5)
+        try:
+            encoder.close()
+        except Exception:
+            pass
         raise
-    finally:
-        progress_bar.close()
-
-    if proc.returncode != 0:
-        err_text = ""
-        if err_bytes is not None:
-            err_text = err_bytes.decode("utf-8", errors="ignore")
-        raise RuntimeError(f"ffmpeg failed while writing transparent video: {err_text}")
-
-    logger.info("Transparent overlay encoding complete")
 
 
 def _draw_overlay_rgba(frame: np.ndarray, t: float, telemetry: TelemetryData, config: OverlayConfig) -> np.ndarray:
