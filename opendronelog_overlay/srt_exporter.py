@@ -17,7 +17,13 @@ class _Cue:
     text: str
 
 
-def export_srt(output_srt_path: str | Path, telemetry: TelemetryData, config: OverlayConfig, interval_s: float = 1.0) -> int:
+def export_srt(
+    output_srt_path: str | Path,
+    telemetry: TelemetryData,
+    config: OverlayConfig,
+    telemetry_offset_s: float = 0.0,
+    interval_s: float = 1.0,
+) -> int:
     if interval_s <= 0:
         raise ValueError("interval_s must be > 0")
 
@@ -35,7 +41,8 @@ def export_srt(output_srt_path: str | Path, telemetry: TelemetryData, config: Ov
     for idx in range(steps):
         start_s = idx * interval_s
         end_s = min(duration_s, (idx + 1) * interval_s)
-        sample_t = min(duration_s, start_s + interval_s * 0.5)
+        sample_t_video = min(duration_s, start_s + interval_s * 0.5)
+        sample_t = sample_t_video - telemetry_offset_s
 
         text = _telemetry_text_block(sample_t, telemetry, config)
 

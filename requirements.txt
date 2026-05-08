@@ -1,2 +1,8 @@
 streamlit
 pandas
+opencv-python
+numpy
+polars
+PyYAML
+typer
+imageio-ffmpeg
