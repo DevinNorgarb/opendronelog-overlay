@@ -6,4 +6,3 @@ polars
 PyYAML
 typer
 imageio-ffmpeg
-streamlit-drawable-canvas

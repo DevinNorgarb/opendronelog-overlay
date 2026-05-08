@@ -7,11 +7,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 import streamlit as st
-from streamlit_drawable_canvas import st_canvas
 
 from opendronelog_overlay.ODL_2_AD import convert_odl_to_airdata
 from opendronelog_overlay.cli import render as cli_render
-from opendronelog_overlay.config import ComponentRect, OverlayComponent, OverlayConfig, dump_config_yaml, load_config
+from opendronelog_overlay.config import load_config
 from opendronelog_overlay.csv_parser import load_telemetry
 from opendronelog_overlay.dji_import import convert_dji_txt_to_odl_csv_via_djirecord
 from opendronelog_overlay.renderer import _draw_overlay_rgba
@@ -137,7 +136,7 @@ def _render_preview_clip(
     return out_path
 
 
-tab_render, tab_build, tab_convert = st.tabs(["Render overlay", "Build config", "Convert ODL → AirData"])
+tab_render, tab_convert = st.tabs(["Render overlay", "Convert ODL → AirData"])
 
 with tab_render:
     st.subheader("1) Upload inputs")
@@ -284,191 +283,6 @@ with tab_render:
 
     else:
         st.info("Upload a video and pick a telemetry source to begin.")
-
-with tab_build:
-    st.subheader("Build overlay config (drag, resize, export YAML)")
-    st.caption("Drag/resize components on a canvas. Download the resulting `overlay.config.yaml`.")
-
-    # Start from defaults; user can optionally load an existing YAML and then edit.
-    base_config_file = st.file_uploader("Optional starting YAML config", type=["yaml", "yml"], key="build_yaml")
-    if base_config_file is not None:
-        base_cfg_path = _save_upload_to_temp(base_config_file, suffix=Path(base_config_file.name).suffix or ".yaml")
-        cfg = load_config(base_cfg_path)
-    else:
-        cfg = load_config(None)
-
-    # Canvas size controls (pixel-accurate to transparent output).
-    st.markdown("**Canvas size (matches `transparent_output`)**")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        cfg.transparent_output.width = int(st.number_input("Width", min_value=320, max_value=7680, value=int(cfg.transparent_output.width), step=10))
-    with c2:
-        cfg.transparent_output.height = int(st.number_input("Height", min_value=240, max_value=4320, value=int(cfg.transparent_output.height), step=10))
-    with c3:
-        cfg.transparent_output.fps = float(st.number_input("FPS", min_value=1.0, max_value=240.0, value=float(cfg.transparent_output.fps), step=1.0))
-
-    st.markdown("**Theme**")
-    t1, t2, t3, t4 = st.columns(4)
-    with t1:
-        cfg.theme.panel_bg_hex = st.color_picker("Panel BG", value=cfg.theme.panel_bg_hex)
-        cfg.theme.accent_hex = st.color_picker("Accent", value=cfg.theme.accent_hex)
-    with t2:
-        cfg.theme.label_text_hex = st.color_picker("Label text", value=cfg.theme.label_text_hex)
-        cfg.theme.value_text_hex = st.color_picker("Value text", value=cfg.theme.value_text_hex)
-    with t3:
-        cfg.theme.muted_text_hex = st.color_picker("Muted text", value=cfg.theme.muted_text_hex)
-        cfg.theme.arc_hex = st.color_picker("Gauge arc", value=cfg.theme.arc_hex)
-    with t4:
-        cfg.theme.tick_hex = st.color_picker("Tick", value=cfg.theme.tick_hex)
-
-    # Palette (add components).
-    st.markdown("**Add components**")
-    pcol1, pcol2 = st.columns([2, 3])
-    with pcol1:
-        new_type = st.selectbox("Component type", ["value_card", "rc_sticks", "dial_gauge", "sparkline", "compass"])
-    with pcol2:
-        new_id = st.text_input("Component id", value=f"{new_type}_{len(cfg.components)+1}")
-
-    if st.button("Add component"):
-        cfg.components.append(
-            OverlayComponent(
-                id=new_id,
-                type=new_type,
-                rect=ComponentRect(x=40, y=40, w=260, h=180),
-                config={},
-                style={},
-            )
-        )
-
-    if not cfg.components:
-        st.info("Add at least one component to start editing. (Existing legacy configs won’t have `components:`.)")
-    else:
-        # Build initial Fabric objects from components.
-        initial_objects = []
-        for comp in cfg.components:
-            r = comp.rect
-            initial_objects.append(
-                {
-                    "type": "rect",
-                    "left": r.x,
-                    "top": r.y,
-                    "width": r.w,
-                    "height": r.h,
-                    "fill": "rgba(0,0,0,0.08)",
-                    "stroke": cfg.theme.accent_hex,
-                    "strokeWidth": 2,
-                    "name": comp.id,
-                }
-            )
-
-        st.markdown("**Layout editor**")
-        canvas = st_canvas(
-            fill_color="rgba(0, 0, 0, 0.02)",
-            stroke_width=2,
-            stroke_color=cfg.theme.accent_hex,
-            background_color="rgba(0, 0, 0, 0)",
-            height=int(cfg.transparent_output.height),
-            width=int(cfg.transparent_output.width),
-            drawing_mode="transform",
-            initial_drawing={"version": "4.4.0", "objects": initial_objects},
-            update_streamlit=True,
-            key="overlay_builder_canvas",
-        )
-
-        # Apply canvas object transforms back to component rects (by object.name == id).
-        if canvas.json_data and isinstance(canvas.json_data, dict):
-            objs = canvas.json_data.get("objects") or []
-            by_name = {}
-            for o in objs:
-                if isinstance(o, dict) and isinstance(o.get("name"), str):
-                    by_name[o["name"]] = o
-
-            for comp in cfg.components:
-                o = by_name.get(comp.id)
-                if not o:
-                    continue
-                left = float(o.get("left", comp.rect.x))
-                top = float(o.get("top", comp.rect.y))
-                ow = float(o.get("width", comp.rect.w))
-                oh = float(o.get("height", comp.rect.h))
-                sx = float(o.get("scaleX", 1.0) or 1.0)
-                sy = float(o.get("scaleY", 1.0) or 1.0)
-                comp.rect.x = int(round(left))
-                comp.rect.y = int(round(top))
-                comp.rect.w = max(1, int(round(ow * sx)))
-                comp.rect.h = max(1, int(round(oh * sy)))
-
-        st.markdown("**Components**")
-        ids = [c.id for c in cfg.components]
-        selected = st.selectbox("Select component", ids)
-        comp = next(c for c in cfg.components if c.id == selected)
-
-        # Fine-tune rect and per-component config.
-        r1, r2, r3, r4 = st.columns(4)
-        with r1:
-            comp.rect.x = int(st.number_input("x", value=int(comp.rect.x), step=1))
-        with r2:
-            comp.rect.y = int(st.number_input("y", value=int(comp.rect.y), step=1))
-        with r3:
-            comp.rect.w = int(st.number_input("w", min_value=1, value=int(comp.rect.w), step=1))
-        with r4:
-            comp.rect.h = int(st.number_input("h", min_value=1, value=int(comp.rect.h), step=1))
-
-        # Type-specific configuration.
-        if comp.type == "value_card":
-            st.markdown("**Value card config**")
-            fields_txt = st.text_input("fields (comma-separated)", value=",".join(comp.config.get("fields", cfg.telemetry.include)))
-            comp.config["fields"] = [s.strip() for s in fields_txt.split(",") if s.strip()]
-        elif comp.type == "dial_gauge":
-            st.markdown("**Dial gauge config**")
-            comp.config["field"] = st.text_input("field", value=str(comp.config.get("field", "speed")))
-            comp.config["label"] = st.text_input("label", value=str(comp.config.get("label", "")))
-        elif comp.type == "sparkline":
-            st.markdown("**Sparkline config**")
-            comp.config["field"] = st.text_input("field", value=str(comp.config.get("field", "speed")))
-            comp.config["window_s"] = float(st.number_input("window_s", min_value=0.5, max_value=60.0, value=float(comp.config.get("window_s", 5.0)), step=0.5))
-        elif comp.type == "compass":
-            st.markdown("**Compass config**")
-            comp.config["field"] = st.text_input("field", value=str(comp.config.get("field", "heading_deg")))
-            comp.config["label"] = st.text_input("label", value=str(comp.config.get("label", "Heading")))
-
-        st.markdown("**Layering**")
-        b1, b2, b3 = st.columns(3)
-        idx = ids.index(comp.id)
-        with b1:
-            if st.button("Move up") and idx > 0:
-                cfg.components[idx - 1], cfg.components[idx] = cfg.components[idx], cfg.components[idx - 1]
-        with b2:
-            if st.button("Move down") and idx < len(cfg.components) - 1:
-                cfg.components[idx + 1], cfg.components[idx] = cfg.components[idx], cfg.components[idx + 1]
-        with b3:
-            if st.button("Delete component"):
-                cfg.components = [c for c in cfg.components if c.id != comp.id]
-
-    # YAML export
-    yaml_text = dump_config_yaml(cfg)
-    st.download_button(
-        "Download overlay config YAML",
-        data=yaml_text.encode("utf-8"),
-        file_name="overlay.config.yaml",
-        mime="text/yaml",
-    )
-
-    # Lightweight preview image (no video needed): draw overlay at t=0 with empty telemetry -> renders mostly n/a,
-    # but is useful for layout.
-    if st.button("Preview overlay frame (layout only)"):
-        dummy = np.zeros((cfg.transparent_output.height, cfg.transparent_output.width, 4), dtype=np.uint8)
-        # Create minimal telemetry arrays to satisfy renderer; values will be zeros.
-        from opendronelog_overlay.csv_parser import TelemetryData
-
-        telem = TelemetryData(
-            time_s=np.array([0.0, 1.0], dtype=np.float64),
-            numeric={},
-            text={},
-            units={},
-        )
-        out = _draw_overlay_rgba(dummy, 0.0, telem, cfg)
-        st.image(out, caption="Overlay preview (transparent BG)", channels="BGRA")
 
 with tab_convert:
     st.subheader("Convert OpenDroneLog CSV → AirData CSV")
