@@ -238,6 +238,7 @@ class TestSmokeRender:
             telemetry=telemetry,
             config=cfg,
             info=info,
+            telemetry_offset_s=0.0,
             progress_bar=_NoopProgress(),  # type: ignore[arg-type]
         )
         assert encoder.frame_count == info.frame_count

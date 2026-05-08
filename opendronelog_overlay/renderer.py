@@ -93,6 +93,7 @@ def render_overlay_transparent_video(
     output_video_path: str,
     telemetry: TelemetryData,
     config: OverlayConfig,
+    telemetry_offset_s: float = 0.0,
     show_progress: bool = True,
     verbose: bool = False,
 ) -> None:
@@ -122,6 +123,7 @@ def render_overlay_transparent_video(
         telemetry,
         config,
         info,
+        telemetry_offset_s=telemetry_offset_s,
         show_progress=show_progress,
         verbose=verbose,
     )
@@ -132,6 +134,7 @@ def _encode_transparent_overlay_frames(
     telemetry: TelemetryData,
     config: OverlayConfig,
     info: TransparentInfo,
+    telemetry_offset_s: float,
     show_progress: bool,
     verbose: bool,
 ) -> None:
@@ -159,6 +162,7 @@ def _encode_transparent_overlay_frames(
             telemetry=telemetry,
             config=config,
             info=info,
+            telemetry_offset_s=telemetry_offset_s,
             progress_bar=progress_bar,
         )
     finally:
@@ -172,13 +176,15 @@ def _render_overlay_frames_to_encoder(
     telemetry: TelemetryData,
     config: OverlayConfig,
     info: TransparentInfo,
+    telemetry_offset_s: float,
     progress_bar: ProgressReporter,
 ) -> None:
     try:
         for frame_idx in range(info.frame_count):
-            t = frame_idx / info.fps
+            t_video = frame_idx / info.fps
+            t_telemetry = t_video - telemetry_offset_s
             frame = np.zeros((info.height, info.width, 4), dtype=np.uint8)
-            frame = _draw_overlay_rgba(frame, t, telemetry, config)
+            frame = _draw_overlay_rgba(frame, t_telemetry, telemetry, config)
             encoder.write(frame)
             progress_bar.update(1)
         encoder.close()

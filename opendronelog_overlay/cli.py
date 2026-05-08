@@ -19,6 +19,11 @@ def render(
     output_video: Path = typer.Option(..., "--output-video"),
     config: Path | None = typer.Option(None, "--config", exists=True, readable=True),
     output_srt: Path | None = typer.Option(None, "--output-srt", help="Optional SRT output path for selected telemetry"),
+    telemetry_offset_s: float = typer.Option(
+        0.0,
+        "--telemetry-offset-s",
+        help="Seconds to shift telemetry to align with video timeline (positive means telemetry happens earlier).",
+    ),
     verbose: int = typer.Option(0, "--verbose", "-v", count=True, help="Increase logging verbosity (-v or -vv)"),
     progress: bool = typer.Option(True, "--progress/--no-progress", help="Show frame conversion progress bar"),
 ) -> None:
@@ -43,6 +48,7 @@ def render(
         output_video_path=str(output_video),
         telemetry=telemetry,
         config=cfg,
+        telemetry_offset_s=telemetry_offset_s,
         show_progress=progress,
         verbose=verbose > 0,
     )
@@ -53,7 +59,7 @@ def render(
                 "output_srt has the same basename as output_video; some players auto-load subtitles and may make previews look cluttered"
             )
         output_srt.parent.mkdir(parents=True, exist_ok=True)
-        cue_count = export_srt(output_srt, telemetry, cfg)
+        cue_count = export_srt(output_srt, telemetry, cfg, telemetry_offset_s=telemetry_offset_s)
         logger.info("SRT export complete with %d cues", cue_count)
         typer.echo(f"Wrote telemetry subtitles: {output_srt}")
 
