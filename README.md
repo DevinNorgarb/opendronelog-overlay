@@ -44,7 +44,7 @@ pip install -e .
 Transparent alpha overlay (typical usage):
 
 ```bash
-opendronelog-overlay \
+opendronelog-overlay render \
   --input-csv ./csv/FlightRecord_2026-03-17_11-22-12_.csv \
   --config ./examples/overlay.config.yaml \
   --output-video ./out/overlay-alpha.mov \
@@ -56,12 +56,41 @@ Use [`examples/gauges.config.yaml`](examples/gauges.config.yaml) instead of `ove
 Add SRT subtitles with the same telemetry selection:
 
 ```bash
-opendronelog-overlay \
+opendronelog-overlay render \
   --input-csv ./csv/FlightRecord_2026-03-17_11-22-12_.csv \
   --config ./examples/overlay.config.yaml \
   --output-video ./out/overlay-alpha.mov \
   --output-srt ./out/overlay-telemetry.srt \
   -v
+```
+
+### Alignment (telemetry offset)
+
+If your CSV `time_s` is slightly ahead/behind the video, you can shift telemetry sampling with:
+
+```bash
+opendronelog-overlay render \
+  --input-csv ./csv/FlightRecord.csv \
+  --config ./examples/overlay.config.yaml \
+  --output-video ./out/overlay-alpha.mov \
+  --telemetry-offset-s 1.25
+```
+
+Offset convention: the overlay samples telemetry at \(t_{telemetry} = t_{video} - \text{offset}\).
+
+- If the overlay looks **late**, increase `--telemetry-offset-s`.
+- If the overlay looks **early**, decrease it (or use a negative value).
+
+### SRT-only export (no video rendering)
+
+To export subtitles without creating a `.mov` overlay:
+
+```bash
+opendronelog-overlay srt \
+  --input-csv ./csv/FlightRecord.csv \
+  --config ./examples/overlay.config.yaml \
+  --output-srt ./out/overlay-telemetry.srt \
+  --telemetry-offset-s 1.25
 ```
 
 Extra logging (includes ffmpeg detail in transparent mode): pass `-vv` instead of `-v`.
