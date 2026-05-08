@@ -10,12 +10,15 @@ import pytest
 
 from opendronelog_overlay.config import OverlayConfig
 from opendronelog_overlay.csv_parser import TelemetryData, load_telemetry
+from opendronelog_overlay.encoding import NullFrameEncoder
 from opendronelog_overlay.renderer import (
     GAUGE_END_DEG,
     GAUGE_START_DEG,
     GAUGE_SWEEP,
+    TransparentInfo,
     _draw_overlay_rgba,
     _draw_gauge_rgba,
+    _render_overlay_frames_to_encoder,
     _hex_to_bgra,
 )
 
@@ -203,3 +206,38 @@ class TestSmokeRender:
         telemetry = load_telemetry(csv_path)
         assert "speed" in telemetry.numeric
         assert telemetry.units.get("speed") == "m/s"
+
+    def test_frame_loop_can_encode_without_ffmpeg(self):
+        rows = [
+            {"time_s": 0.0, "speed_ms": 0.0, "height_m": 0.0, "battery_percent": 100},
+            {"time_s": 1.0, "speed_ms": 10.0, "height_m": 30.0, "battery_percent": 90},
+        ]
+        csv_path = self._write_csv(rows)
+        telemetry = load_telemetry(csv_path)
+
+        cfg = OverlayConfig()
+        cfg.transparent_output.width = 64
+        cfg.transparent_output.height = 32
+        cfg.transparent_output.fps = 2.0
+
+        info = TransparentInfo(
+            fps=cfg.transparent_output.fps,
+            width=cfg.transparent_output.width,
+            height=cfg.transparent_output.height,
+            duration_s=1.0,
+            frame_count=3,
+        )
+        encoder = NullFrameEncoder(expected_width=info.width, expected_height=info.height)
+
+        class _NoopProgress:
+            def update(self, amount: int = 1) -> None:
+                pass
+
+        _render_overlay_frames_to_encoder(
+            encoder=encoder,
+            telemetry=telemetry,
+            config=cfg,
+            info=info,
+            progress_bar=_NoopProgress(),  # type: ignore[arg-type]
+        )
+        assert encoder.frame_count == info.frame_count
