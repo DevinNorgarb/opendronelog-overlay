@@ -8,12 +8,12 @@ import cv2
 import numpy as np
 import streamlit as st
 
-from opendronelog_overlay.ODL_2_AD import convert_odl_to_airdata
-from opendronelog_overlay.cli import render as cli_render
-from opendronelog_overlay.config import load_config
-from opendronelog_overlay.csv_parser import load_telemetry
-from opendronelog_overlay.dji_import import convert_dji_txt_to_odl_csv_via_djirecord
-from opendronelog_overlay.renderer import _draw_overlay_rgba
+from flightframe.ODL_2_AD import convert_odl_to_airdata
+from flightframe.cli import render as cli_render
+from flightframe.config import load_config
+from flightframe.csv_parser import load_telemetry
+from flightframe.dji_import import convert_dji_txt_to_odl_csv_via_djirecord
+from flightframe.renderer import _draw_overlay_rgba
 
 
 st.set_page_config(page_title="OpenDroneLog Overlay", page_icon="🚁", layout="wide")

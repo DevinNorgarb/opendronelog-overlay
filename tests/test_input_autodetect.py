@@ -7,7 +7,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from opendronelog_overlay.cli import app
+from flightframe.cli import app
 
 
 def _write_csv(path: Path, rows: list[dict]) -> None:

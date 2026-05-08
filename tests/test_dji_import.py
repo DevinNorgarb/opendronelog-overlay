@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from opendronelog_overlay.dji_import import _map_djirecord_csv_to_odl_csv
+from flightframe.dji_import import _map_djirecord_csv_to_odl_csv
 
 
 def _write_csv(headers: list[str], rows: list[dict[str, str]]) -> Path:

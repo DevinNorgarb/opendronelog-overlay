@@ -6,10 +6,10 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from opendronelog_overlay.cli import app
-from opendronelog_overlay.config import OverlayConfig
-from opendronelog_overlay.csv_parser import load_telemetry
-from opendronelog_overlay.srt_exporter import export_srt
+from flightframe.cli import app
+from flightframe.config import OverlayConfig
+from flightframe.csv_parser import load_telemetry
+from flightframe.srt_exporter import export_srt
 
 
 def _write_csv(rows: list[dict]) -> Path:
