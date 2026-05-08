@@ -68,6 +68,25 @@ Extra logging (includes ffmpeg detail in transparent mode): pass `-vv` instead o
 
 **Progress bar:** on by default; disable with `--no-progress`, or pass `--progress` to force it on.
 
+### Import DJI FlightRecord `.txt`
+
+DJI “`.txt`” flight logs are a binary format. Convert them to a CSV that this tool can ingest:
+
+```bash
+opendronelog-overlay import-dji \
+  --input-txt "/path/to/DJIFlightRecord_2024-12-30_[21-34-15].txt" \
+  --output-csv ./out/flight.csv \
+  --output-airdata-csv ./out/flight.airdata.csv
+```
+
+This command shells out to `djirecord` (from `pydjirecord`). Install it via `pipx` to avoid dependency conflicts:
+
+```bash
+brew install pipx
+pipx ensurepath
+pipx install pydjirecord
+```
+
 ## Configuration
 
 Reference configs:
