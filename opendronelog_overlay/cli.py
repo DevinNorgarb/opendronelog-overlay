@@ -7,6 +7,8 @@ import typer
 
 from .config import load_config
 from .csv_parser import load_telemetry
+from .dji_import import convert_dji_txt_to_odl_csv_via_djirecord
+from .ODL_2_AD import convert_odl_to_airdata
 from .renderer import render_overlay_transparent_video
 from .srt_exporter import export_srt
 
@@ -64,6 +66,41 @@ def render(
         typer.echo(f"Wrote telemetry subtitles: {output_srt}")
 
     typer.echo(f"Wrote overlay video: {output_video}")
+
+
+@app.command("import-dji")
+def import_dji(
+    input_txt: Path = typer.Option(..., "--input-txt", exists=True, readable=True, help="DJI FlightRecord .txt file"),
+    output_csv: Path = typer.Option(..., "--output-csv", help="Output CSV with `time_s` for opendronelog-overlay"),
+    output_airdata_csv: Path | None = typer.Option(
+        None,
+        "--output-airdata-csv",
+        help="Optional AirData-style CSV output (generated from the overlay-ready CSV)",
+    ),
+    api_key: str | None = typer.Option(
+        None,
+        "--api-key",
+        envvar="DJI_API_KEY",
+        help="DJI API key for decrypting v13+ flight records (or set DJI_API_KEY)",
+    ),
+    no_verify: bool = typer.Option(
+        False,
+        "--no-verify",
+        help="Disable TLS verification when djirecord fetches decryption keys (only needed for some environments).",
+    ),
+) -> None:
+    """Convert DJI FlightRecord .txt (binary) into CSV(s) usable by this project."""
+    res = convert_dji_txt_to_odl_csv_via_djirecord(
+        input_txt=input_txt,
+        output_csv=output_csv,
+        api_key=api_key,
+        no_verify=no_verify,
+    )
+    typer.echo(f"Wrote overlay-ready CSV: {res.odl_csv_path}")
+    if output_airdata_csv is not None:
+        output_airdata_csv.parent.mkdir(parents=True, exist_ok=True)
+        convert_odl_to_airdata(res.odl_csv_path, output_airdata_csv)
+        typer.echo(f"Wrote AirData CSV: {output_airdata_csv}")
 
 
 if __name__ == "__main__":
