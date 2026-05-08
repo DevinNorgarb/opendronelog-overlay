@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from opendronelog_overlay.config import GaugesConfig, OverlayConfig, load_config
+from flightframe.config import GaugesConfig, OverlayConfig, load_config
 
 
 class TestDefaultConfig:
